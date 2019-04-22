@@ -19,4 +19,4 @@
 (100, 3)
 (108, 2)
 (117, 0)
-average waiting time 10.69 
+average waiting time 4.50 
