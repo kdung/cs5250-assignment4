@@ -12,6 +12,7 @@ Output files:
 
 import sys
 from collections import deque
+import heapq
 
 input_file = 'input.txt'
 
@@ -27,6 +28,9 @@ class Process:
 
     def __repr__(self):
         return '[id %d : arrival_time %d,  burst_time %d]'%(self.id, self.arrive_time, self.burst_time)
+
+    def __lt__(self, other):
+        return self.arrive_time < other.arrive_time
 
 
 def FCFS_scheduling(process_list):
@@ -89,9 +93,67 @@ def RR_scheduling(process_list, time_quantum ):
     return schedule, average_waiting_time
 
 
+# scheduling process_list on SRTF, using process.burst_time
+# to calculate the remaining time of the current process
 def SRTF_scheduling(process_list):
-    return ["to be completed, scheduling process_list on SRTF, using process.burst_time"
-            " to calculate the remaining time of the current process "], 0.0
+    schedule = []
+    current_time = 0
+    waiting_time = 0
+    total_process = len(process_list)
+    ready_queue = []
+
+    while ready_queue or process_list:
+        if not ready_queue:
+            heapq.heappush(ready_queue, (process_list[0].burst_time, process_list[0]))
+            process_list.remove(process_list[0])
+        running_burst_time, running_process = heapq.heappop(ready_queue)
+        if current_time < running_process.arrive_time:
+            current_time = running_process.arrive_time
+        schedule.append((current_time, running_process.id))
+        # getting new process
+        taken_processes = []
+        for waiting_process in process_list:
+            running_process_remain_time = running_burst_time - (waiting_process.arrive_time - current_time)
+            if running_process_remain_time > waiting_process.burst_time:
+                # preempt current running process and pick the new arrival process
+                current_time = waiting_process.arrive_time
+                heapq.heappush(ready_queue, (running_process_remain_time, running_process))
+                running_process = waiting_process
+                running_burst_time = running_process.burst_time
+                schedule.append((current_time, running_process.id))
+                taken_processes.append(waiting_process)
+            elif running_process_remain_time > 0:
+                # update current time and remain burst time then continue
+                current_time = waiting_process.arrive_time
+                running_burst_time = running_process_remain_time
+                heapq.heappush(ready_queue, (waiting_process.burst_time, waiting_process))
+                taken_processes.append(waiting_process)
+            else:
+                # finishing current running process and pick new process from ready queue
+                current_time = current_time + running_burst_time
+                waiting_time = waiting_time + (current_time - running_process.arrive_time)
+
+                if waiting_process.arrive_time <= current_time:
+                    heapq.heappush(ready_queue, (waiting_process.burst_time, waiting_process))
+                    taken_processes.append(waiting_process)
+                    running_burst_time, running_process = heapq.heappop(ready_queue)
+                    if current_time < running_process.arrive_time:
+                        current_time = running_process.arrive_time
+                    schedule.append((current_time, running_process.id))
+                else:
+                    break
+
+        # remove processes which have been moved to ready
+        for process in taken_processes:
+            process_list.remove(process)
+
+        if not process_list:
+            # if there is no more arriving process, finish the current running process
+            current_time = current_time + running_burst_time
+            waiting_time = waiting_time + (current_time - running_process.arrive_time)
+
+    average_waiting_time = waiting_time / float(total_process)
+    return schedule, average_waiting_time
 
 
 def SJF_scheduling(process_list, alpha):
@@ -121,7 +183,7 @@ def main(argv):
     process_list = read_input()
     print("printing input ----")
     for process in process_list:
-        print (process)
+        print(process)
     print("simulating FCFS ----")
     FCFS_schedule, FCFS_avg_waiting_time =  FCFS_scheduling(process_list)
     write_output('FCFS.txt', FCFS_schedule, FCFS_avg_waiting_time)
@@ -129,9 +191,11 @@ def main(argv):
     RR_schedule, RR_avg_waiting_time =  RR_scheduling(process_list, time_quantum=2)
     write_output('RR.txt', RR_schedule, RR_avg_waiting_time)
     print("simulating SRTF ----")
+    process_list = read_input()
     SRTF_schedule, SRTF_avg_waiting_time =  SRTF_scheduling(process_list)
     write_output('SRTF.txt', SRTF_schedule, SRTF_avg_waiting_time)
     print("simulating SJF ----")
+    process_list = read_input()
     SJF_schedule, SJF_avg_waiting_time =  SJF_scheduling(process_list, alpha=0.5)
     write_output('SJF.txt', SJF_schedule, SJF_avg_waiting_time)
 
