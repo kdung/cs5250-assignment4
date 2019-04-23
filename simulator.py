@@ -226,19 +226,30 @@ def main(argv):
     for process in process_list:
         print(process)
     print("simulating FCFS ----")
-    FCFS_schedule, FCFS_avg_waiting_time =  FCFS_scheduling(process_list)
+    FCFS_schedule, FCFS_avg_waiting_time = FCFS_scheduling(process_list)
     write_output('FCFS.txt', FCFS_schedule, FCFS_avg_waiting_time)
+
     print("simulating RR ----")
-    RR_schedule, RR_avg_waiting_time =  RR_scheduling(process_list, time_quantum=2)
-    write_output('RR.txt', RR_schedule, RR_avg_waiting_time)
+    for i in range(2, 11):
+        process_list = read_input()
+        RR_schedule, RR_avg_waiting_time = RR_scheduling(process_list, time_quantum=i)
+        print("RR quantum=" + str(i) + " avg waiting time=" + str(RR_avg_waiting_time))
+        write_output('RR.txt', RR_schedule, RR_avg_waiting_time)
+
     print("simulating SRTF ----")
     process_list = read_input()
-    SRTF_schedule, SRTF_avg_waiting_time =  SRTF_scheduling(process_list)
+    SRTF_schedule, SRTF_avg_waiting_time = SRTF_scheduling(process_list)
     write_output('SRTF.txt', SRTF_schedule, SRTF_avg_waiting_time)
+
     print("simulating SJF ----")
-    process_list = read_input()
-    SJF_schedule, SJF_avg_waiting_time =  SJF_scheduling(process_list, alpha=0.5)
-    write_output('SJF.txt', SJF_schedule, SJF_avg_waiting_time)
+
+    i = 0.1
+    while i < 1:
+        process_list = read_input()
+        SJF_schedule, SJF_avg_waiting_time = SJF_scheduling(process_list, alpha=i)
+        write_output('SJF.txt', SJF_schedule, SJF_avg_waiting_time)
+        print("SJF alpha=" + str(i) + " avg waiting time=" + str(SJF_avg_waiting_time))
+        i = i + 0.1
 
 
 if __name__ == '__main__':
