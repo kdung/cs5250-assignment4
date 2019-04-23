@@ -36,7 +36,7 @@ class Process:
 
 
 def FCFS_scheduling(process_list):
-    # store the (switching time, proccess_id) pair
+    # store the (switching time, process_id) pair
     schedule = []
     current_time = 0
     waiting_time = 0
@@ -51,7 +51,7 @@ def FCFS_scheduling(process_list):
 
 
 # Input: process_list, time_quantum (Positive Integer)
-# Output_1 : Schedule list contains pairs of (time_stamp, proccess_id) indicating the time switching to that proccess_id
+# Output_1 : Schedule list contains pairs of (time_stamp, process_id) indicating the time switching to that proccess_id
 # Output_2 : Average Waiting Time
 def RR_scheduling(process_list, time_quantum ):
     schedule = []
@@ -165,56 +165,37 @@ def SJF_scheduling(process_list, alpha):
     waiting_time = 0
     total_process = len(process_list)
     ready_queue = []
-
+    process_hist = dict()
     while ready_queue or process_list:
         if not ready_queue:
             heapq.heappush(ready_queue, (process_list[0].predicted_time, process_list[0]))
             process_list.remove(process_list[0])
-        running_burst_time, running_process = heapq.heappop(ready_queue)
+        running_predicted_time, running_process = heapq.heappop(ready_queue)
         if current_time < running_process.arrive_time:
             current_time = running_process.arrive_time
         schedule.append((current_time, running_process.id))
-        # getting new process
+        waiting_time = waiting_time + (current_time - running_process.arrive_time)
+        current_time = current_time + running_process.burst_time
+
+        process_hist[running_process.id] = running_process
+
+        # getting new processes to the ready queue
         taken_processes = []
         for waiting_process in process_list:
-            running_process_remain_time = running_burst_time - (waiting_process.arrive_time - current_time)
-            if running_process_remain_time > waiting_process.burst_time:
-                # preempt current running process and pick the new arrival process
-                current_time = waiting_process.arrive_time
-                heapq.heappush(ready_queue, (running_process_remain_time, running_process))
-                running_process = waiting_process
-                running_burst_time = running_process.burst_time
-                schedule.append((current_time, running_process.id))
-                taken_processes.append(waiting_process)
-            elif running_process_remain_time > 0:
-                # update current time and remain burst time then continue
-                current_time = waiting_process.arrive_time
-                running_burst_time = running_process_remain_time
-                heapq.heappush(ready_queue, (waiting_process.burst_time, waiting_process))
+            if waiting_process.arrive_time <= current_time:
+                # calculate predicted time for waiting_process and push to ready_queue
+                if waiting_process.id in process_hist:
+                    prev_instance = process_hist[waiting_process.id]
+                    waiting_process.predicted_time =\
+                        alpha * prev_instance.burst_time + (1 - alpha) * prev_instance.predicted_time
+                heapq.heappush(ready_queue, (waiting_process.predicted_time, waiting_process))
                 taken_processes.append(waiting_process)
             else:
-                # finishing current running process and pick new process from ready queue
-                current_time = current_time + running_burst_time
-                waiting_time = waiting_time + (current_time - running_process.arrive_time)
-
-                if waiting_process.arrive_time <= current_time:
-                    heapq.heappush(ready_queue, (waiting_process.burst_time, waiting_process))
-                    taken_processes.append(waiting_process)
-                    running_burst_time, running_process = heapq.heappop(ready_queue)
-                    if current_time < running_process.arrive_time:
-                        current_time = running_process.arrive_time
-                    schedule.append((current_time, running_process.id))
-                else:
-                    break
+                break
 
         # remove processes which have been moved to ready
         for process in taken_processes:
             process_list.remove(process)
-
-        if not process_list:
-            # if there is no more arriving process, finish the current running process
-            current_time = current_time + running_burst_time
-            waiting_time = waiting_time + (current_time - running_process.arrive_time)
 
     average_waiting_time = waiting_time / float(total_process)
     return schedule, average_waiting_time
@@ -225,10 +206,10 @@ def read_input():
     with open(input_file) as f:
         for line in f:
             array = line.split()
-            if len(array)!= 3:
+            if len(array) != 3:
                 print ("wrong input format")
                 exit()
-            result.append(Process(int(array[0]),int(array[1]),int(array[2])))
+            result.append(Process(int(array[0]), int(array[1]), int(array[2])))
     return result
 
 
